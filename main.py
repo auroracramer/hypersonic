@@ -3,6 +3,7 @@ import os
 import random
 import warnings
 from datetime import datetime
+from typing import Dict, Tuple, Any
 
 warnings.simplefilter("ignore", UserWarning)
 
@@ -24,7 +25,7 @@ plt.switch_backend('agg')
 torch.backends.cudnn.benchmark = True
 
 
-def get_args():
+def get_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--prefix', default='tmp', type=str, help='prefix of checkpoint filename')
@@ -133,7 +134,7 @@ def get_args():
     return args
 
 
-def main():
+def main() -> None:
     args = get_args()
 
     # Fix randomness
@@ -233,7 +234,7 @@ def main():
         trainer.train()
 
 
-def set_path(args):
+def set_path(args: argparse.Namespace) -> Tuple[str, str]:
     if args.resume:
         exp_path = os.path.dirname(os.path.dirname(args.resume))
     else:
