@@ -38,6 +38,18 @@ class TestModel:
         assert hasattr(model, 'hyperbolic_linear')
         assert hasattr(model, 'backbone')
         assert hasattr(model, 'adapt_dim')
+        
+    def test_model_init_hyperbolic_transformer(self, sample_args_hyperbolic_transformer):
+        """Test model initialization with hyperbolic transformer."""
+        model = Model(sample_args_hyperbolic_transformer)
+        
+        assert model.args.hyperbolic == True
+        assert model.use_transformer == True
+        assert hasattr(model, 'hyperbolic_linear')
+        assert hasattr(model, 'agg')
+        # Check that agg is a ConvHyperbolicTransformer
+        from backbone.hyperbolic_transformer import ConvHyperbolicTransformer
+        assert isinstance(model.agg, ConvHyperbolicTransformer)
 
     def test_model_init_custom_feature_dim(self, sample_args):
         """Test model initialization with custom feature dimension."""
@@ -91,6 +103,28 @@ class TestModel:
         assert pred.shape[0] == video_tensor.shape[0]  # batch size
         assert feature_dist.shape[0] == video_tensor.shape[0]
         assert sizes_pred.shape[0] == video_tensor.shape[0]
+        
+    def test_model_forward_hyperbolic_transformer(self, sample_args_hyperbolic_transformer, sample_video_data):
+        """Test forward pass with hyperbolic transformer."""
+        model = Model(sample_args_hyperbolic_transformer)
+        model.eval()
+        
+        video_tensor, labels = sample_video_data
+        
+        # Test forward pass
+        with torch.no_grad():
+            output = model(video_tensor, labels)
+        
+        assert len(output) == 3  # pred, feature_dist, sizes_pred
+        pred, feature_dist, sizes_pred = output
+        
+        # Check output shapes
+        assert pred.shape[0] == video_tensor.shape[0]  # batch size
+        assert feature_dist.shape[0] == video_tensor.shape[0]
+        assert sizes_pred.shape[0] == video_tensor.shape[0]
+        
+        # Verify transformer was used
+        assert model.use_transformer == True
 
     def test_model_forward_with_labels(self, sample_args, sample_video_data):
         """Test forward pass with labels."""

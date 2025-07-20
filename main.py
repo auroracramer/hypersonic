@@ -31,6 +31,10 @@ def get_args():
     # Model
     parser.add_argument('--hyperbolic', action='store_true', help='Hyperbolic mode')
     parser.add_argument('--hyperbolic_version', default=1, type=int, help='Controls what layers we make hyperbolic')
+    parser.add_argument('--use_transformer', action='store_true', help='Use transformer instead of ConvGRU for temporal modeling')
+    parser.add_argument('--num_heads', default=8, type=int, help='Number of attention heads in transformer')
+    parser.add_argument('--transformer_layers', default=4, type=int, help='Number of transformer layers')
+    parser.add_argument('--transformer_dropout', default=0.1, type=float, help='Dropout rate in transformer')
     parser.add_argument('--resume', default='', type=str, help='path of model to resume')
     parser.add_argument('--pretrain', default='', type=str,
                         help='path of pretrained model. Difference with resume is that we start a completely new '
