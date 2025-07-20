@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import losses
 from backbone.convrnn import ConvGRU
 from backbone.hyrnn_nets import MobiusLinear, MobiusDist2Hyperplane
+from backbone.hyperbolic_transformer import HyperbolicTransformer, ConvHyperbolicTransformer
 from backbone.select_backbone import select_resnet
 
 
@@ -48,6 +49,7 @@ class Model(nn.Module):
         When using a ConvGRU with a 1x1 convolution, it is equivalent to using a regular GRU by flattening the H and W 
         dimensions and adding those as extra samples in the batch (B' = BxHxW), and then going back to the original 
         shape. So we can use the hyperbolic GRU.
+        For hyperbolic transformers, we implement temporal modeling in hyperbolic space with attention mechanisms.
         """
         if args.hyperbolic:
             self.hyperbolic_linear = MobiusLinear(self.feature_dim,
@@ -63,10 +65,30 @@ class Model(nn.Module):
                 self.hyperbolic_linear = self.hyperbolic_linear.double()
         self.fp64_hyper = args.fp64_hyper
 
-        self.agg = ConvGRU(input_size=self.feature_dim,
-                           hidden_size=self.feature_dim,
-                           kernel_size=1,
-                           num_layers=self.num_layers)
+        # Choose between ConvGRU and Hyperbolic Transformer
+        self.use_transformer = getattr(args, 'use_transformer', False)
+        
+        if self.use_transformer:
+            if args.hyperbolic:
+                # Use hyperbolic transformer for temporal modeling
+                self.agg = ConvHyperbolicTransformer(
+                    input_size=self.feature_dim,
+                    hidden_size=self.feature_dim,
+                    num_heads=getattr(args, 'num_heads', 8),
+                    num_layers=getattr(args, 'transformer_layers', 4),
+                    dropout=getattr(args, 'transformer_dropout', 0.1),
+                    k=-1.0,
+                    fp64_hyper=args.fp64_hyper
+                )
+            else:
+                # Use standard transformer (would need implementation for Euclidean case)
+                raise NotImplementedError("Standard transformer not implemented yet. Use --hyperbolic with transformers.")
+        else:
+            # Use ConvGRU (original implementation)
+            self.agg = ConvGRU(input_size=self.feature_dim,
+                               hidden_size=self.feature_dim,
+                               kernel_size=1,
+                               num_layers=self.num_layers)
 
         if args.use_labels:
             if args.hyperbolic:
@@ -146,8 +168,23 @@ class Model(nn.Module):
         if self.args.early_action_self or (self.args.early_action and not self.args.action_level_gt):
             feature += self.time_index(torch.range(0, feature.shape[1] - 1).long().to('cuda'))[None, :, :, None, None]
 
-        hidden_all, hidden = self.agg(feature[:, 0:N - self.args.pred_step, :].contiguous())
-        hidden = hidden[:, -1, :]  # after tanh, (-1,1). get the hidden state of last layer, last time step
+        if self.use_transformer:
+            # For transformer: feature is [B, N, D, H, W], reshape to [B, N, H, W, D]
+            feature_input = feature[:, 0:N - self.args.pred_step, :].contiguous()
+            feature_input = feature_input.permute(0, 1, 3, 4, 2)  # [B, N, H, W, D]
+            
+            # Apply hyperbolic transformer
+            hidden_all, attention_weights = self.agg(feature_input)
+            
+            # Convert back to [B, N, D, H, W] format
+            hidden_all = hidden_all.permute(0, 1, 4, 2, 3)  # [B, N, D, H, W]
+            
+            # Get the last time step for prediction
+            hidden = hidden_all[:, -1, :]  # [B, D, H, W]
+        else:
+            # Original ConvGRU path
+            hidden_all, hidden = self.agg(feature[:, 0:N - self.args.pred_step, :].contiguous())
+            hidden = hidden[:, -1, :]  # after tanh, (-1,1). get the hidden state of last layer, last time step
 
         if self.args.use_labels:
             if self.args.linear_input == 'features_z':

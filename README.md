@@ -8,6 +8,10 @@ This code is built on the DPC code in [github.com/TengdaHan/DPC](https://github.
 We also used hyperbolic networks from [github.com/geoopt/geoopt](https://github.com/geoopt/geoopt) and hyperbolic
 operations from the [geoopt](https://github.com/geoopt/geoopt) library.
 
+## New: Hyperbolic Transformers
+
+This repository now includes **hyperbolic transformer implementations** that replace ConvGRU with attention mechanisms operating in hyperbolic space. See [HYPERBOLIC_TRANSFORMERS.md](HYPERBOLIC_TRANSFORMERS.md) for detailed documentation.
+
 Under `scripts` there are example bash files to run the self-supervised training and finetuning, and the 
 supervised training and testing of our model.
 

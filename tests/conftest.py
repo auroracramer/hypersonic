@@ -64,6 +64,20 @@ def sample_args_hyperbolic(sample_args):
     args = sample_args
     args.hyperbolic = True
     args.hyperbolic_version = 1
+    args.fp64_hyper = False
+    return args
+
+@pytest.fixture
+def sample_args_hyperbolic_transformer(sample_args):
+    """Create a sample args object for hyperbolic transformer testing."""
+    args = sample_args
+    args.hyperbolic = True
+    args.hyperbolic_version = 1
+    args.fp64_hyper = False
+    args.use_transformer = True
+    args.num_heads = 8
+    args.transformer_layers = 2
+    args.transformer_dropout = 0.1
     return args
 
 @pytest.fixture
